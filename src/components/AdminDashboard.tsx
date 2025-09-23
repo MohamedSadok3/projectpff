@@ -502,85 +502,288 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
             </div>
           </div>
 
-          {complaints.map((complaint) => (
-            <div
-              key={complaint.id}
-              className="bg-white rounded-lg shadow-sm border p-6 cursor-pointer hover:bg-gray-50"
-              onClick={() => setSelectedComplaint(complaint)}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{complaint.title}</h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(complaint.status)}`}>
-                      {getStatusText(complaint.status)}
-                    </span>
-                  </div>
-                  <p className="text-gray-600 mb-3">{complaint.description}</p>
-                  <div className="flex items-center text-sm text-gray-500 mb-2">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    {new Date(complaint.created_at).toLocaleDateString('fr-FR')}
-                  </div>
-                  {complaint.client && (
-                    <p className="text-sm text-gray-500">Client: {complaint.client.email}</p>
-                  )}
-                  {complaint.fournisseur && (
-                    <p className="text-sm text-gray-500">Fournisseur: {complaint.fournisseur.email}</p>
-                  )}
-                </div>
-                <div className="flex flex-col space-y-2">
-                  {complaint.status === 'pending' && (
-                    <div className="flex items-center space-x-2">
-                      <select
-                        onChange={(e) => assignComplaint(complaint.id, e.target.value)}
-                        className="text-sm border border-gray-300 rounded px-2 py-1"
-                        defaultValue=""
-                      >
-                        <option value="" disabled>Assigner à...</option>
-                        {fournisseurs.map((f) => (
-                          <option key={f.id} value={f.id}>{f.email}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => setStatusUpdate({ ...statusUpdate, complaintId: complaint.id })}
-                    className="text-sm bg-indigo-100 text-indigo-700 px-3 py-1 rounded hover:bg-indigo-200 transition-colors"
-                  >
-                    Mettre à jour statut
-                  </button>
-                </div>
-              </div>
+          {/* Complaints Table */}
+          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Réclamation
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Détails Article
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Quantités
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Statut
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {complaints.map((complaint) => (
+                    <tr key={complaint.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <div className="text-sm font-medium text-gray-900">{complaint.title}</div>
+                          <div className="text-sm text-gray-500 max-w-xs truncate">{complaint.description}</div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            N° Réclamation: {complaint.claimnumber || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            Créé: {new Date(complaint.created_at).toLocaleDateString('fr-FR')}
+                          </div>
+                          {complaint.client && (
+                            <div className="text-xs text-blue-600">Client: {complaint.client.email}</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          <div><strong>Article:</strong> {complaint.articlenumber || 'N/A'}</div>
+                          <div className="text-xs text-gray-500 max-w-xs truncate">
+                            {complaint.articledescription || 'Pas de description'}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            <strong>Fournisseur:</strong> {complaint.supplier || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            <strong>Bon de livraison:</strong> {complaint.deliverynotenumber || 'N/A'}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          <div><strong>Total:</strong> {complaint.totalquantity || 0}</div>
+                          <div className="text-red-600"><strong>Défectueuse:</strong> {complaint.defectivequantity || 0}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          <div><strong>Personne:</strong> {complaint.contactperson || 'N/A'}</div>
+                          <div className="text-xs text-gray-500">{complaint.contactemail || 'Pas d\'email'}</div>
+                          <div className="text-xs text-gray-500">{complaint.contactphone || 'Pas de téléphone'}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col space-y-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(complaint.status)}`}>
+                            {getStatusText(complaint.status)}
+                          </span>
+                          {complaint.fournisseur && (
+                            <div className="text-xs text-green-600">
+                              Assigné à: {complaint.fournisseur.email}
+                            </div>
+                          )}
+                          {complaint.reportdeadline && (
+                            <div className="text-xs text-orange-600">
+                              Rapport: {complaint.reportdeadline}
+                            </div>
+                          )}
+                          <div className="flex space-x-1">
+                            {complaint.replacement && (
+                              <span className="px-1 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">Remplacement</span>
+                            )}
+                            {complaint.creditnote && (
+                              <span className="px-1 py-0.5 bg-green-100 text-green-800 text-xs rounded">Crédit</span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex flex-col space-y-2">
+                          <button
+                            onClick={() => setSelectedComplaint(complaint)}
+                            className="text-indigo-600 hover:text-indigo-900 text-xs"
+                          >
+                            Voir détails
+                          </button>
+                          {complaint.status === 'pending' && (
+                            <select
+                              onChange={(e) => assignComplaint(complaint.id, e.target.value)}
+                              className="text-xs border border-gray-300 rounded px-1 py-1"
+                              defaultValue=""
+                            >
+                              <option value="" disabled>Assigner...</option>
+                              {fournisseurs.map((f) => (
+                                <option key={f.id} value={f.id}>{f.email}</option>
+                              ))}
+                            </select>
+                          )}
+                          <button
+                            onClick={() => setStatusUpdate({ ...statusUpdate, complaintId: complaint.id })}
+                            className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200 transition-colors"
+                          >
+                            Statut
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
+            
+            {complaints.length === 0 && (
+              <div className="text-center py-12">
+                <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune réclamation</h3>
+                <p className="text-gray-600">Aucune réclamation n'a été soumise pour le moment.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {/* Complaint Details Modal */}
       {selectedComplaint && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto relative mx-4">
             <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl"
               onClick={() => setSelectedComplaint(null)}
             >
               ×
             </button>
-            <h3 className="text-xl font-bold mb-2">{selectedComplaint.title}</h3>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedComplaint.status)}`}>
-              {getStatusText(selectedComplaint.status)}
-            </span>
-            <p className="mt-4 text-gray-700">{selectedComplaint.description}</p>
-            <div className="mt-2 text-sm text-gray-500">
-              <Calendar className="w-4 h-4 inline mr-1" />
-              {new Date(selectedComplaint.created_at).toLocaleDateString('fr-FR')}
+            
+            <div className="pr-8">
+              <div className="flex items-center space-x-3 mb-4">
+                <h3 className="text-2xl font-bold text-gray-900">{selectedComplaint.title}</h3>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedComplaint.status)}`}>
+                  {getStatusText(selectedComplaint.status)}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Informations de base</h4>
+                    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                      <p><strong>Description:</strong> {selectedComplaint.description}</p>
+                      <p><strong>N° Réclamation:</strong> {selectedComplaint.claimnumber || 'N/A'}</p>
+                      <p><strong>Date de création:</strong> {new Date(selectedComplaint.created_at).toLocaleDateString('fr-FR')}</p>
+                      {selectedComplaint.client && (
+                        <p><strong>Client:</strong> {selectedComplaint.client.email}</p>
+                      )}
+                      {selectedComplaint.fournisseur && (
+                        <p><strong>Fournisseur assigné:</strong> {selectedComplaint.fournisseur.email}</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Article Details */}
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Détails de l'article</h4>
+                    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                      <p><strong>N° Article:</strong> {selectedComplaint.articlenumber || 'N/A'}</p>
+                      <p><strong>Description:</strong> {selectedComplaint.articledescription || 'N/A'}</p>
+                      <p><strong>Fournisseur:</strong> {selectedComplaint.supplier || 'N/A'}</p>
+                      <p><strong>N° Bon de livraison:</strong> {selectedComplaint.deliverynotenumber || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Contact & Quantities */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Contact</h4>
+                    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                      <p><strong>Personne de contact:</strong> {selectedComplaint.contactperson || 'N/A'}</p>
+                      <p><strong>Nom:</strong> {selectedComplaint.contactname || 'N/A'}</p>
+                      <p><strong>Email:</strong> {selectedComplaint.contactemail || 'N/A'}</p>
+                      <p><strong>Téléphone:</strong> {selectedComplaint.contactphone || 'N/A'}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Quantités</h4>
+                    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                      <p><strong>Quantité totale:</strong> {selectedComplaint.totalquantity || 0}</p>
+                      <p><strong>Quantité défectueuse:</strong> <span className="text-red-600">{selectedComplaint.defectivequantity || 0}</span></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Error Description */}
+              {selectedComplaint.errordescription && (
+                <div className="mt-6">
+                  <h4 className="font-semibold text-gray-900 mb-2">Description de l'erreur</h4>
+                  <div className="bg-red-50 p-4 rounded-lg">
+                    <p className="text-red-800">{selectedComplaint.errordescription}</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Requests */}
+              <div className="mt-6">
+                <h4 className="font-semibold text-gray-900 mb-2">Demandes</h4>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="flex flex-wrap gap-2">
+                    {selectedComplaint.statementresponse && (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">Stellungnahme</span>
+                    )}
+                    {selectedComplaint.reportdeadline && (
+                      <span className="px-2 py-1 bg-orange-100 text-orange-800 text-sm rounded">
+                        Rapport {selectedComplaint.reportdeadline}
+                      </span>
+                    )}
+                    {selectedComplaint.replacement && (
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded">Remplacement</span>
+                    )}
+                    {selectedComplaint.creditnote && (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-800 text-sm rounded">Note de crédit</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Remarks */}
+              {selectedComplaint.remarks && (
+                <div className="mt-6">
+                  <h4 className="font-semibold text-gray-900 mb-2">Remarques</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p>{selectedComplaint.remarks}</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Error Pictures */}
+              {selectedComplaint.errorpictures && selectedComplaint.errorpictures !== '[]' && (
+                <div className="mt-6">
+                  <h4 className="font-semibold text-gray-900 mb-2">Images d'erreur</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600">Images disponibles (voir données brutes)</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* 8D Report */}
+              {selectedComplaint.report_8d_url && (
+                <div className="mt-6">
+                  <h4 className="font-semibold text-gray-900 mb-2">Rapport 8D</h4>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <a
+                      href={selectedComplaint.report_8d_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      📄 Télécharger Rapport 8D
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
-            {selectedComplaint.client && (
-              <p className="text-sm text-gray-500 mt-2">Client: {selectedComplaint.client.email}</p>
-            )}
-            {selectedComplaint.fournisseur && (
-              <p className="text-sm text-gray-500">Fournisseur: {selectedComplaint.fournisseur.email}</p>
-            )}
           </div>
         </div>
       )}

@@ -107,7 +107,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const fetchFournisseurs = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fournisseurs`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/users/fournisseurs`,
         {
           headers: {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -127,7 +127,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const fetchClients = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clients`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/users/clients`,
         {
           headers: {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -147,7 +147,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const fetchAdmins = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admins`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/users/admins`,
         {
           headers: {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -226,7 +226,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     e.preventDefault();
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admins`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/users/admins`,
         {
           method: 'POST',
           headers: {
@@ -343,7 +343,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admins/${adminId}`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/users/admins/${adminId}`,
         {
           method: 'DELETE',
           headers: {

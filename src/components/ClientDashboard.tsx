@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Calendar, AlertCircle } from 'lucide-react';
 import type { Complaint, AuthUser } from '../types/auth';
+import { uploadMultipleFiles } from '../lib/storage';
 
 interface ClientDashboardProps {
   user: AuthUser;
@@ -59,7 +60,14 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
   // TODO: Replace with Supabase Storage upload
   const uploadFiles = async (files: File[]) => {
     if (!files.length) return [];
-    return files.map((file) => URL.createObjectURL(file));
+    
+    try {
+      const urls = await uploadMultipleFiles(files, 'complaint-images', 'error-pictures');
+      return urls;
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      return [];
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -394,11 +402,17 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
               <input
                 type="file"
                 multiple
+                accept="image/*"
                 onChange={(e) =>
                   setFormData({ ...formData, errorPictures: Array.from(e.target.files || []) })
                 }
                 className="w-full px-3 py-2 border rounded-lg"
               />
+              {formData.errorPictures.length > 0 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  {formData.errorPictures.length} fichier(s) sélectionné(s)
+                </p>
+              )}
             </div>
 
             {/* Submit / Cancel */}

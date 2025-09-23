@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, FileText, Plus, Trash2, Calendar, UserPlus, Settings, Send } from 'lucide-react';
 import type { Complaint, AuthUser, UserManagement } from '../types/auth';
+import { uploadMultipleFiles, uploadFile } from '../lib/storage';
 
 interface AdminDashboardProps {
   user: AuthUser;
@@ -252,8 +253,8 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     e.preventDefault();
     try {
       // Upload error images if any
-      const imageUrls = complaintFormData.errorpictures.length > 0 
-        ? complaintFormData.errorpictures.map(file => URL.createObjectURL(file))
+      const imageUrls = complaintFormData.errorpictures.length > 0
+        ? await uploadMultipleFiles(complaintFormData.errorpictures, 'complaint-images', 'error-pictures')
         : [];
 
       const response = await fetch(
@@ -368,8 +369,10 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
       // Upload 8D report if provided
       let report8dUrl = '';
       if (statusUpdate.report8d) {
-        // In a real app, upload to Supabase Storage
-        report8dUrl = URL.createObjectURL(statusUpdate.report8d);
+        const uploadResult = await uploadFile(statusUpdate.report8d, 'complaint-reports', '8d-reports');
+        if (uploadResult.success && uploadResult.url) {
+          report8dUrl = uploadResult.url;
+        }
       }
 
       const response = await fetch(
@@ -628,6 +631,11 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                   onChange={(e) => setStatusUpdate({ ...statusUpdate, report8d: e.target.files?.[0] || null })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
+                {statusUpdate.report8d && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Fichier sélectionné: {statusUpdate.report8d.name}
+                  </p>
+                )}
               </div>
               
               <div className="flex space-x-3">
@@ -818,6 +826,11 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                 onChange={(e) => setComplaintFormData({ ...complaintFormData, errorpictures: Array.from(e.target.files || []) })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
+              {complaintFormData.errorpictures.length > 0 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  {complaintFormData.errorpictures.length} fichier(s) sélectionné(s)
+                </p>
+              )}
             </div>
 
             <div>

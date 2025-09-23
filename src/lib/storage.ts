@@ -12,6 +12,21 @@ export const uploadFile = async (
   folder: string = ''
 ): Promise<UploadResult> => {
   try {
+    // Check if bucket exists first
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    if (listError) {
+      console.error('Error checking buckets:', listError);
+      return { success: false, error: `Storage error: ${listError.message}` };
+    }
+
+    const bucketExists = buckets?.some(b => b.name === bucket);
+    if (!bucketExists) {
+      return { 
+        success: false, 
+        error: `Storage bucket '${bucket}' not found. Please create it in your Supabase dashboard.` 
+      };
+    }
+
     // Generate unique filename
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;

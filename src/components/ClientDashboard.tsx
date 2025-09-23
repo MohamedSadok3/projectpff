@@ -76,6 +76,13 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
 
     try {
       const imageUrls = await uploadFiles(formData.errorPictures);
+      
+      // Check if file upload failed due to missing bucket
+      if (formData.errorPictures.length > 0 && imageUrls.length === 0) {
+        alert('Erreur: Les buckets de stockage Supabase n\'existent pas. Veuillez créer les buckets "complaint-images" et "complaint-reports" dans votre tableau de bord Supabase.');
+        setSubmitting(false);
+        return;
+      }
 
       const payload = {
         ...formData,
@@ -101,9 +108,12 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
         setComplaints([data.data, ...complaints]);
         setFormData(initialFormData);
         setShowForm(false);
+      } else {
+        alert('Erreur lors de la création de la réclamation: ' + (data.error || 'Erreur inconnue'));
       }
     } catch (error) {
       console.error('Error creating complaint:', error);
+      alert('Erreur lors de la création de la réclamation');
     } finally {
       setSubmitting(false);
     }

@@ -77,18 +77,11 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
     try {
       const imageUrls = await uploadFiles(formData.errorPictures);
       
-      // Check if file upload failed due to missing bucket
-      if (formData.errorPictures.length > 0 && imageUrls.length === 0) {
-        alert('Erreur: Les buckets de stockage Supabase n\'existent pas. Veuillez créer les buckets "complaint-images" et "complaint-reports" dans votre tableau de bord Supabase.');
-        setSubmitting(false);
-        return;
-      }
-
       const payload = {
         ...formData,
         client_id: user.id,
-        creationDate: new Date().toISOString(), // overwrite each submit
-        errorPictures: imageUrls,
+        creationdate: new Date().toISOString(),
+        errorpictures: JSON.stringify(imageUrls),
       };
 
       const response = await fetch(
@@ -109,11 +102,10 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
         setFormData(initialFormData);
         setShowForm(false);
       } else {
-        alert('Erreur lors de la création de la réclamation: ' + (data.error || 'Erreur inconnue'));
+        console.error('Error creating complaint:', data);
       }
     } catch (error) {
       console.error('Error creating complaint:', error);
-      alert('Erreur lors de la création de la réclamation');
     } finally {
       setSubmitting(false);
     }
@@ -478,6 +470,36 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
                       day: 'numeric',
                     })}
                   </div>
+                  
+                  {/* Show error pictures if available */}
+                  {complaint.errorpictures && complaint.errorpictures !== '[]' && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-600 mb-2">Images d'erreur:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {JSON.parse(complaint.errorpictures).map((imageUrl: string, index: number) => (
+                          <div key={index} className="relative">
+                            {imageUrl.startsWith('data:') ? (
+                              <img 
+                                src={imageUrl} 
+                                alt={`Error ${index + 1}`}
+                                className="w-16 h-16 object-cover rounded border cursor-pointer hover:opacity-80"
+                                onClick={() => window.open(imageUrl, '_blank')}
+                              />
+                            ) : (
+                              <a 
+                                href={imageUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-block w-16 h-16 bg-blue-100 rounded border flex items-center justify-center text-blue-600 hover:bg-blue-200"
+                              >
+                                📷
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Show 8D Report if available */}
                   {complaint.report_8d_url && (

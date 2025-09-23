@@ -65,13 +65,44 @@ export const uploadMultipleFiles = async (
   bucket: string,
   folder: string = ''
 ): Promise<string[]> => {
-  const uploadPromises = files.map(file => uploadFile(file, bucket, folder));
-  const results = await Promise.all(uploadPromises);
+  // If no files, return empty array
+  if (!files.length) return [];
   
-  return results
-    .filter(result => result.success)
-    .map(result => result.url!)
-    .filter(Boolean);
+  try {
+    const uploadPromises = files.map(file => uploadFile(file, bucket, folder));
+    const results = await Promise.all(uploadPromises);
+    
+    return results
+      .filter(result => result.success)
+      .map(result => result.url!)
+      .filter(Boolean);
+  } catch (error) {
+    console.error('Storage upload failed, falling back to base64:', error);
+    // Fallback: convert files to base64 for database storage
+    return await convertFilesToBase64(files);
+  }
+};
+
+// Fallback function to convert files to base64
+const convertFilesToBase64 = async (files: File[]): Promise<string[]> => {
+  const base64Promises = files.map(file => {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  });
+  
+  try {
+    return await Promise.all(base64Promises);
+  } catch (error) {
+    console.error('Error converting files to base64:', error);
+    return [];
+  }
 };
 
 export const deleteFile = async (

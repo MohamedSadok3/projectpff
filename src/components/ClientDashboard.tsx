@@ -126,6 +126,21 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
     }
   };
 
+  // Helper function to safely parse error pictures JSON
+  const parseErrorPictures = (errorPictures: string | null | undefined): string[] => {
+    if (!errorPictures || errorPictures.trim() === '') {
+      return [];
+    }
+    
+    try {
+      const parsed = JSON.parse(errorPictures);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.warn('Failed to parse error pictures JSON:', errorPictures);
+      return [];
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -472,11 +487,13 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
                   </div>
                   
                   {/* Show error pictures if available */}
-                  {complaint.errorpictures && complaint.errorpictures !== '[]' && (
+                  {(() => {
+                    const errorPictures = parseErrorPictures(complaint.errorpictures);
+                    return errorPictures.length > 0 && (
                     <div className="mt-2">
                       <p className="text-sm text-gray-600 mb-2">Images d'erreur:</p>
                       <div className="flex flex-wrap gap-2">
-                        {JSON.parse(complaint.errorpictures).map((imageUrl: string, index: number) => (
+                        {errorPictures.map((imageUrl: string, index: number) => (
                           <div key={index} className="relative">
                             {imageUrl.startsWith('data:') ? (
                               <img 
@@ -499,7 +516,8 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
                         ))}
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                   
                   {/* Show 8D Report if available */}
                   {complaint.report_8d_url && (

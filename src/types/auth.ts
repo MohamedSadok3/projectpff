@@ -47,7 +47,7 @@ export interface Complaint {
   resend: boolean;
 
   // Images (peuvent être des URL ou des fichiers base64 côté API)
-  errorPictures?: string[];
+  errorpictures?: string; // JSON string stored in database
 
   // Statut et métadonnées
   status: 'pending' | 'assigned' | 'resolved';

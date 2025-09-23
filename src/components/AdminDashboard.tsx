@@ -27,7 +27,6 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const [complaintFormData, setComplaintFormData] = useState({
     title: '',
     description: '',
-    client_id: '',
     fournisseur_id: '',
     claimnumber: '',
     articlenumber: '',
@@ -45,7 +44,14 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     reportdeadline: '',
     replacement: false,
     creditnote: false,
-    remarks: ''
+    remarks: '',
+    errorpictures: [] as File[]
+  });
+  const [statusUpdate, setStatusUpdate] = useState({
+    complaintId: '',
+    status: '',
+    statusText: '',
+    report8d: null as File | null
   });
 
   useEffect(() => {
@@ -245,6 +251,11 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const createComplaint = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Upload error images if any
+      const imageUrls = complaintFormData.errorpictures.length > 0 
+        ? complaintFormData.errorpictures.map(file => URL.createObjectURL(file))
+        : [];
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/complaints`,
         {
@@ -255,7 +266,9 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
           },
           body: JSON.stringify({
             ...complaintFormData,
-            status: complaintFormData.fournisseur_id ? 'assigned' : 'pending'
+            client_id: user.id, // Admin creates complaint as themselves
+            status: complaintFormData.fournisseur_id ? 'assigned' : 'pending',
+            errorpictures: imageUrls
           })
         }
       );
@@ -266,7 +279,6 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         setComplaintFormData({
           title: '',
           description: '',
-          client_id: '',
           fournisseur_id: '',
           claimnumber: '',
           articlenumber: '',
@@ -284,7 +296,8 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
           reportdeadline: '',
           replacement: false,
           creditnote: false,
-          remarks: ''
+          remarks: '',
+          errorpictures: []
         });
         setActiveTab('complaints');
       }
@@ -345,6 +358,44 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
       }
     } catch (error) {
       console.error('Error deleting admin:', error);
+    }
+  };
+
+  const updateComplaintStatus = async () => {
+    if (!statusUpdate.complaintId || !statusUpdate.status) return;
+
+    try {
+      // Upload 8D report if provided
+      let report8dUrl = '';
+      if (statusUpdate.report8d) {
+        // In a real app, upload to Supabase Storage
+        report8dUrl = URL.createObjectURL(statusUpdate.report8d);
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/complaints`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            id: statusUpdate.complaintId,
+            status: statusUpdate.status,
+            statusText: statusUpdate.statusText,
+            report8dUrl: report8dUrl
+          })
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        fetchComplaints();
+        setStatusUpdate({ complaintId: '', status: '', statusText: '', report8d: null });
+      }
+    } catch (error) {
+      console.error('Error updating complaint status:', error);
     }
   };
 
@@ -474,20 +525,28 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                     <p className="text-sm text-gray-500">Fournisseur: {complaint.fournisseur.email}</p>
                   )}
                 </div>
-                {complaint.status === 'pending' && (
-                  <div className="flex items-center space-x-2">
-                    <select
-                      onChange={(e) => assignComplaint(complaint.id, e.target.value)}
-                      className="text-sm border border-gray-300 rounded px-2 py-1"
-                      defaultValue=""
-                    >
-                      <option value="" disabled>Assigner à...</option>
-                      {fournisseurs.map((f) => (
-                        <option key={f.id} value={f.id}>{f.email}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                <div className="flex flex-col space-y-2">
+                  {complaint.status === 'pending' && (
+                    <div className="flex items-center space-x-2">
+                      <select
+                        onChange={(e) => assignComplaint(complaint.id, e.target.value)}
+                        className="text-sm border border-gray-300 rounded px-2 py-1"
+                        defaultValue=""
+                      >
+                        <option value="" disabled>Assigner à...</option>
+                        {fournisseurs.map((f) => (
+                          <option key={f.id} value={f.id}>{f.email}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setStatusUpdate({ ...statusUpdate, complaintId: complaint.id })}
+                    className="text-sm bg-indigo-100 text-indigo-700 px-3 py-1 rounded hover:bg-indigo-200 transition-colors"
+                  >
+                    Mettre à jour statut
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -519,7 +578,73 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
             {selectedComplaint.fournisseur && (
               <p className="text-sm text-gray-500">Fournisseur: {selectedComplaint.fournisseur.email}</p>
             )}
-            {/* Add more details if needed */}
+          </div>
+        </div>
+      )}
+
+      {/* Status Update Modal */}
+      {statusUpdate.complaintId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setStatusUpdate({ complaintId: '', status: '', statusText: '', report8d: null })}
+            >
+              ×
+            </button>
+            <h3 className="text-xl font-bold mb-4">Mettre à jour le statut</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nouveau statut</label>
+                <select
+                  value={statusUpdate.status}
+                  onChange={(e) => setStatusUpdate({ ...statusUpdate, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="">Sélectionner un statut</option>
+                  <option value="pending">En attente</option>
+                  <option value="assigned">Assignée</option>
+                  <option value="resolved">Résolue</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Commentaire sur le statut</label>
+                <textarea
+                  rows={3}
+                  value={statusUpdate.statusText}
+                  onChange={(e) => setStatusUpdate({ ...statusUpdate, statusText: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Ajouter un commentaire sur ce changement de statut..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rapport 8D (PDF)</label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setStatusUpdate({ ...statusUpdate, report8d: e.target.files?.[0] || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={updateComplaintStatus}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Mettre à jour
+                </button>
+                <button
+                  onClick={() => setStatusUpdate({ complaintId: '', status: '', statusText: '', report8d: null })}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -531,7 +656,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
           </div>
 
           <form onSubmit={createComplaint} className="space-y-6 bg-white rounded-lg shadow-sm border p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Titre *</label>
                 <input
@@ -541,20 +666,6 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                   onChange={(e) => setComplaintFormData({ ...complaintFormData, title: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Client *</label>
-                <select
-                  required
-                  value={complaintFormData.client_id}
-                  onChange={(e) => setComplaintFormData({ ...complaintFormData, client_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  <option value="">Sélectionner un client</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>{client.email}</option>
-                  ))}
-                </select>
               </div>
             </div>
 
@@ -670,7 +781,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                 onChange={(e) => setComplaintFormData({ ...complaintFormData, fournisseur_id: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
-                <option value="">Ne pas assigner maintenant</option>
+                <option value="">Sélectionner un fournisseur</option>
                 {fournisseurs.map((fournisseur) => (
                   <option key={fournisseur.id} value={fournisseur.id}>{fournisseur.email}</option>
                 ))}
@@ -696,6 +807,17 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                 />
                 Note de crédit
               </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Images d'erreur</label>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => setComplaintFormData({ ...complaintFormData, errorpictures: Array.from(e.target.files || []) })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
             </div>
 
             <div>

@@ -128,7 +128,7 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
 
   // Helper function to safely parse error pictures JSON
   const parseErrorPictures = (errorPictures: string | null | undefined): string[] => {
-    if (!errorPictures || errorPictures.trim() === '') {
+    if (!errorPictures || typeof errorPictures !== 'string' || errorPictures.trim() === '') {
       return [];
     }
     

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, FileText, Plus, Trash2, Calendar, UserPlus, Settings } from 'lucide-react';
+import { Users, FileText, Plus, Trash2, Calendar, UserPlus, Settings, Send } from 'lucide-react';
 import type { Complaint, AuthUser, UserManagement } from '../types/auth';
 
 interface AdminDashboardProps {
@@ -7,22 +7,53 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ user }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'complaints' | 'users'>('complaints');
+  const [activeTab, setActiveTab] = useState<'complaints' | 'users' | 'create-complaint'>('complaints');
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [users, setUsers] = useState<UserManagement[]>([]);
+  const [clients, setClients] = useState<{ id: string; email: string }[]>([]);
   const [fournisseurs, setFournisseurs] = useState<{ id: string; email: string }[]>([]);
+  const [admins, setAdmins] = useState<{ id: string; email: string; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUserForm, setShowUserForm] = useState(false);
+  const [showAdminForm, setShowAdminForm] = useState(false);
   const [userFormData, setUserFormData] = useState({
     email: '',
-    role: 'client' as 'client' | 'fournisseur'
+    role: 'client' as 'client' | 'fournisseur' | 'admin'
+  });
+  const [adminFormData, setAdminFormData] = useState({
+    email: ''
   });
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
+  const [complaintFormData, setComplaintFormData] = useState({
+    title: '',
+    description: '',
+    client_id: '',
+    fournisseur_id: '',
+    claimnumber: '',
+    articlenumber: '',
+    articledescription: '',
+    deliverynotenumber: '',
+    supplier: '',
+    totalquantity: 0,
+    defectivequantity: 0,
+    contactperson: '',
+    contactname: '',
+    contactemail: '',
+    contactphone: '',
+    errordescription: '',
+    statementresponse: '',
+    reportdeadline: '',
+    replacement: false,
+    creditnote: false,
+    remarks: ''
+  });
 
   useEffect(() => {
     fetchComplaints();
     fetchUsers();
     fetchFournisseurs();
+    fetchClients();
+    fetchAdmins();
   }, []);
 
   const fetchComplaints = async () => {
@@ -87,6 +118,46 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     }
   };
 
+  const fetchClients = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clients`,
+        {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        setClients(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    }
+  };
+
+  const fetchAdmins = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admins`,
+        {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        setAdmins(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+    }
+  };
+
   const assignComplaint = async (complaintId: string, fournisseurId: string) => {
     try {
       const response = await fetch(
@@ -136,10 +207,89 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         setShowUserForm(false);
         if (userFormData.role === 'fournisseur') {
           fetchFournisseurs();
+        } else if (userFormData.role === 'client') {
+          fetchClients();
         }
       }
     } catch (error) {
       console.error('Error creating user:', error);
+    }
+  };
+
+  const createAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admins`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify(adminFormData)
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        setAdmins([...admins, data.data]);
+        setAdminFormData({ email: '' });
+        setShowAdminForm(false);
+      }
+    } catch (error) {
+      console.error('Error creating admin:', error);
+    }
+  };
+
+  const createComplaint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/complaints`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            ...complaintFormData,
+            status: complaintFormData.fournisseur_id ? 'assigned' : 'pending'
+          })
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        setComplaints([data.data, ...complaints]);
+        setComplaintFormData({
+          title: '',
+          description: '',
+          client_id: '',
+          fournisseur_id: '',
+          claimnumber: '',
+          articlenumber: '',
+          articledescription: '',
+          deliverynotenumber: '',
+          supplier: '',
+          totalquantity: 0,
+          defectivequantity: 0,
+          contactperson: '',
+          contactname: '',
+          contactemail: '',
+          contactphone: '',
+          errordescription: '',
+          statementresponse: '',
+          reportdeadline: '',
+          replacement: false,
+          creditnote: false,
+          remarks: ''
+        });
+        setActiveTab('complaints');
+      }
+    } catch (error) {
+      console.error('Error creating complaint:', error);
     }
   };
 
@@ -164,10 +314,37 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         setUsers(users.filter(u => u.id !== userId));
         if (role === 'fournisseur') {
           fetchFournisseurs();
+        } else if (role === 'client') {
+          fetchClients();
         }
       }
     } catch (error) {
       console.error('Error deleting user:', error);
+    }
+  };
+
+  const deleteAdmin = async (adminId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet administrateur ?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admins/${adminId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        setAdmins(admins.filter(a => a.id !== adminId));
+      }
+    } catch (error) {
+      console.error('Error deleting admin:', error);
     }
   };
 
@@ -218,6 +395,17 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
           >
             <FileText className="w-4 h-4 inline mr-2" />
             Réclamations ({complaints.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('create-complaint')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'create-complaint'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Plus className="w-4 h-4 inline mr-2" />
+            Créer Réclamation
           </button>
           <button
             onClick={() => setActiveTab('users')}
@@ -336,17 +524,230 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         </div>
       )}
 
+      {activeTab === 'create-complaint' && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Créer une Nouvelle Réclamation</h3>
+          </div>
+
+          <form onSubmit={createComplaint} className="space-y-6 bg-white rounded-lg shadow-sm border p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Titre *</label>
+                <input
+                  type="text"
+                  required
+                  value={complaintFormData.title}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Client *</label>
+                <select
+                  required
+                  value={complaintFormData.client_id}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, client_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="">Sélectionner un client</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>{client.email}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+              <textarea
+                required
+                rows={3}
+                value={complaintFormData.description}
+                onChange={(e) => setComplaintFormData({ ...complaintFormData, description: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Numéro de réclamation</label>
+                <input
+                  type="text"
+                  value={complaintFormData.claimnumber}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, claimnumber: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Numéro d'article</label>
+                <input
+                  type="text"
+                  value={complaintFormData.articlenumber}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, articlenumber: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description de l'article</label>
+                <input
+                  type="text"
+                  value={complaintFormData.articledescription}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, articledescription: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Fournisseur</label>
+                <input
+                  type="text"
+                  value={complaintFormData.supplier}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, supplier: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quantité totale</label>
+                <input
+                  type="number"
+                  value={complaintFormData.totalquantity}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, totalquantity: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quantité défectueuse</label>
+                <input
+                  type="number"
+                  value={complaintFormData.defectivequantity}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, defectivequantity: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Personne de contact</label>
+                <input
+                  type="text"
+                  value={complaintFormData.contactperson}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, contactperson: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email de contact</label>
+                <input
+                  type="email"
+                  value={complaintFormData.contactemail}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, contactemail: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description de l'erreur</label>
+              <textarea
+                rows={3}
+                value={complaintFormData.errordescription}
+                onChange={(e) => setComplaintFormData({ ...complaintFormData, errordescription: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Assigner à un fournisseur (optionnel)</label>
+              <select
+                value={complaintFormData.fournisseur_id}
+                onChange={(e) => setComplaintFormData({ ...complaintFormData, fournisseur_id: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                <option value="">Ne pas assigner maintenant</option>
+                {fournisseurs.map((fournisseur) => (
+                  <option key={fournisseur.id} value={fournisseur.id}>{fournisseur.email}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center space-x-6">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={complaintFormData.replacement}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, replacement: e.target.checked })}
+                  className="mr-2"
+                />
+                Remplacement
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={complaintFormData.creditnote}
+                  onChange={(e) => setComplaintFormData({ ...complaintFormData, creditnote: e.target.checked })}
+                  className="mr-2"
+                />
+                Note de crédit
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Remarques</label>
+              <textarea
+                rows={3}
+                value={complaintFormData.remarks}
+                onChange={(e) => setComplaintFormData({ ...complaintFormData, remarks: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                type="submit"
+                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Créer la Réclamation
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('complaints')}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Annuler
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {activeTab === 'users' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold text-gray-900">Gestion des Utilisateurs</h3>
-            <button
-              onClick={() => setShowUserForm(true)}
-              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Nouvel Utilisateur
-            </button>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowUserForm(true)}
+                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Nouvel Utilisateur
+              </button>
+              <button
+                onClick={() => setShowAdminForm(true)}
+                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Nouvel Admin
+              </button>
+            </div>
           </div>
 
           {showUserForm && (
@@ -393,7 +794,88 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
             </div>
           )}
 
+          {showAdminForm && (
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Créer un Administrateur</h4>
+              <form onSubmit={createAdmin} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={adminFormData.email}
+                    onChange={(e) => setAdminFormData({ ...adminFormData, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Créer Admin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminForm(false)}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Admins Table */}
           <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h4 className="text-lg font-semibold text-gray-900">Administrateurs ({admins.length})</h4>
+            </div>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date de création
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {admins.map((admin) => (
+                  <tr key={admin.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {admin.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(admin.created_at).toLocaleDateString('fr-FR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {admin.email !== user.email && (
+                        <button
+                          onClick={() => deleteAdmin(admin.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Users Table */}
+          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h4 className="text-lg font-semibold text-gray-900">Clients et Fournisseurs ({users.length})</h4>
+            </div>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>

@@ -95,6 +95,108 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // GET /clients - Get all clients for admin complaint creation
+    if (req.method === "GET" && action === "clients") {
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/client?select=id,email`,
+        {
+          headers: {
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+            "apikey": supabaseServiceKey,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch clients");
+      }
+
+      const clients = await response.json();
+      return new Response(
+        JSON.stringify({ success: true, data: clients }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // GET /admins - Get all admins
+    if (req.method === "GET" && action === "admins") {
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/admin?select=id,email,created_at`,
+        {
+          headers: {
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+            "apikey": supabaseServiceKey,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch admins");
+      }
+
+      const admins = await response.json();
+      return new Response(
+        JSON.stringify({ success: true, data: admins }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // POST /admins - Create new admin
+    if (req.method === "POST" && action === "admins") {
+      const { email } = await req.json();
+
+      if (!email) {
+        return new Response(
+          JSON.stringify({ success: false, message: "Missing email" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const response = await fetch(`${supabaseUrl}/rest/v1/admin`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${supabaseServiceKey}`,
+          "apikey": supabaseServiceKey,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify({
+          email,
+          password: 'password', // Default password
+          first_login: true
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: errorData.message || "Failed to create admin" 
+          }),
+          {
+            status: response.status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const admin = await response.json();
+      return new Response(
+        JSON.stringify({ success: true, data: admin[0] }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // POST /users - Create new user
     if (req.method === "POST" && action === "users") {
       const { email, role }: CreateUserRequest = await req.json();
@@ -154,7 +256,31 @@ Deno.serve(async (req: Request) => {
       const userId = pathParts[pathParts.length - 2];
       const userRole = pathParts[pathParts.length - 1];
 
-      if (!userId || !userRole) {
+      // Handle admin deletion (different URL pattern)
+      if (pathParts[pathParts.length - 2] === "admins") {
+        const adminId = pathParts[pathParts.length - 1];
+        
+        const response = await fetch(`${supabaseUrl}/rest/v1/admin?id=eq.${adminId}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+            "apikey": supabaseServiceKey,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to delete admin");
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, message: "Admin deleted successfully" }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      if (!userId || !userRole || userRole === "admins") {
         return new Response(
           JSON.stringify({ success: false, message: "Missing user ID or role" }),
           {

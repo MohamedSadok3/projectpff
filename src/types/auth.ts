@@ -53,6 +53,7 @@ export interface Complaint {
   status: 'pending' | 'assigned' | 'resolved';
   created_at: string;
   updated_at: string;
+  report_8d_url?: string;
 
   client?: {
     email: string;

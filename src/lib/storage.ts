@@ -1,28 +1,5 @@
 import { supabase } from './supabase';
 
-// Ensure storage buckets exist
-const ensureBucketsExist = async () => {
-  const buckets = ['complaint-images', 'complaint-reports'];
-  
-  for (const bucketName of buckets) {
-    const { data: existingBucket } = await supabase.storage.getBucket(bucketName);
-    
-    if (!existingBucket) {
-      const { error } = await supabase.storage.createBucket(bucketName, {
-        public: true,
-        allowedMimeTypes: bucketName === 'complaint-images' 
-          ? ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-          : ['application/pdf'],
-        fileSizeLimit: 10485760 // 10MB
-      });
-      
-      if (error) {
-        console.error(`Error creating bucket ${bucketName}:`, error);
-      }
-    }
-  }
-};
-
 export interface UploadResult {
   success: boolean;
   url?: string;
@@ -35,9 +12,6 @@ export const uploadFile = async (
   folder: string = ''
 ): Promise<UploadResult> => {
   try {
-    // Ensure bucket exists before uploading
-    await ensureBucketsExist();
-    
     // Generate unique filename
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;

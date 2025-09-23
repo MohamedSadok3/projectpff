@@ -267,7 +267,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
           },
           body: JSON.stringify({
             ...complaintFormData,
-            client_id: user.id, // Admin creates complaint as themselves
+            client_id: user.id,
             status: complaintFormData.fournisseur_id ? 'assigned' : 'pending',
             errorpictures: imageUrls
           })

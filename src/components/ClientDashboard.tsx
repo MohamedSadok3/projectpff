@@ -468,6 +468,20 @@ export default function ClientDashboard({ user }: ClientDashboardProps) {
                       day: 'numeric',
                     })}
                   </div>
+                  
+                  {/* Show 8D Report if available */}
+                  {complaint.report_8d_url && (
+                    <div className="mt-2">
+                      <a
+                        href={complaint.report_8d_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 text-sm rounded-lg hover:bg-green-200 transition-colors"
+                      >
+                        📄 Télécharger Rapport 8D
+                      </a>
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => handleDelete(complaint.id)}
